@@ -1,0 +1,58 @@
+#!/usr/bin/php
+<?php
+
+	require '/usr/share/apf-dev/boot.php';
+
+	use \apf\core\Kernel;
+	use \apf\core\kernel\Helper	as	KernelHelper;
+	use \apf\core\kernel\Config	as	KernelConfig;
+
+	use \apf\core\Log;
+	use \apf\core\Directory			as	Dir;
+	use \apf\core\log\File			as	FileLog;
+	use \apf\core\File;
+
+	try{
+
+		$log	=	new FileLog(
+									Array(
+											'file'				=>	(new File('logs/kernel.log'))->setWriteMode('a+'),
+											'fileColoring'		=>	FALSE,
+											'stdout'				=>	TRUE,
+											'colors'				=>	TRUE,
+											'logDate'			=>	TRUE
+									)
+		);
+
+		try{
+
+			KernelHelper::setLog($log);
+			Kernel::boot();
+
+			$kernel	=	new Kernel(new KernelConfig(),$validate='none');
+			$main		=	new File(realpath('./config/general.json'));
+			$kernel->init($main);
+
+			$kernel->getConfig()
+			->getProject()
+			->getConfig()
+			->getRouter()
+			->getConfig()
+			->setRequest($_SERVER['argv'][1])
+			->setRequestSeparator(':');
+
+		}catch(\Exception $e){
+
+			$log->error($e->getMessage());
+			$log->debug($e->getTraceAsString());
+
+		}
+
+	}catch(\Exception $e){
+
+		$log	=	new Log();
+		$log->error("Error initializing log!");
+		$log->debug($e->getMessage());
+		$log->warning($e->getTraceAsString());
+
+	}

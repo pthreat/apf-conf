@@ -1,0 +1,13 @@
+{
+	"name":"apf-conf",
+	"description":"APF configuration tool",
+	"directories":{
+						"modules":"modules",
+						"templates":"templates",
+						"fragments":"fragments",
+						"vendors":"vendor",
+						"libraries":"lib",
+						"models":"lib\/models",
+						"forms":"lib\/forms"
+	}
+}
