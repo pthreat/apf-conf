@@ -1,127 +1,186 @@
 <?php 
 
+	
+	//Interfaces & Traits
+	///////////////////////////////////////////////////////////////////
+
 	interface Renderizable{
 
 		public function render();
 
 	}
 
+	interface Decoratable{
+
+		public function setOutputDecorator($decorator);
+		public function getOutputDecorator();
+
+	}
+
+	trait DecoratableTrait{
+
+		public function setOutputDecorator($log){
+
+			$this->outputDecorator	=	$log;
+			return $this;
+
+		}
+
+		public function getOutputDecorator(){
+
+			//If context is web, choose another output decorator instead of Log
+
+			if($this->outputDecorator === NULL){
+
+				$this->setOutputDecorator(new \apf\core\Log());
+
+			}
+
+			return $this->outputDecorator;
+
+		}
+
+	}
+
+	/////////////////////////////////////////////////////////////
+
 	abstract class Form implements Renderizable{
+
+		public function __construct(){
+
+			$this->configure();
+
+		}
+
+		//According to SAPI context get 
+
+		public static function factory(){
+		}
+
+		abstract public function configure();
+
+		public function getElements(){
+
+			return $this->elements;
+
+		}
 
 		public function render(){
 
-			foreach($this->widgets as $widget){
+			$output	=	'';
 
-				$widget->render();
+			foreach($this->elements as $widget){
+
+				$output	=	sprintf('%s%s',$output,$widget);
 
 			}
 
+			return $output;
+
+		}
+
+		public function __toString(){
+
+			return $this->render();
+
 		}
 
 	}
 
-	abstract class Validator{
+	abstract class CliForm extends Form{
 
-		abstract public function __construct(Array $parameters=Array());
+		public function addElement(CliElement $widget){
 
-		abstract public function validate(Widget $widget);
+				$this->elements[]	=	$widget;
+				return $this;
+
+		}
+
+		public function render(){
+
+			$output	=	'';
+
+			foreach($this->elements as $widget){
+
+				echo sprintf('%s) %s (%s)',$output,$widget);
+
+			}
+
+			return $output;
+
+		}
 
 	}
 
-	class InputValidator extends Validator{
+	abstract class WebForm extends Form{
 
-		private	$options	=	Array();
-		private	$empty	=	FALSE;
-		private	$trim		=	TRUE;
+		public function addElement(WebElement $widget){
 
-		public function __construct(Array $parameters=Array()){
-
-			$this->setOptions(array_key_exists('options',$parameters)	?	$parameters["options"]	:	$this->options);
-			$this->setEmpty(array_key_exists('empty',$parameters)			?	$parameters["empty"]		:	$this->empty);
-			$this->setTrim(array_key_exists('trim',$parameters)			?	$parameters["trim"]		:	$this->trim);
-
-		}
-
-		public function setTrim($boolean){
-
-			$this->trim	=	(boolean)$trim;
+			$this->elements[]	=	$widget;
 			return $this;
 
 		}
 
-		public function getTrim(){
+	}
 
-			return $this->trim;
+	////////////////////////////////////////////////////
+	//ABSTRACT FORM ELEMENTS
+	////////////////////////////////////////////////////
+
+	class Attribute{
+
+		private	$name			=	NULL;
+		private	$value		=	NULL;
+		private	$separator	=	'=';
+
+		public function __construct($name,$value){
+
+			$this->setName($name);
+			$this->setValue($value);
 
 		}
 
-		public function setEmpty($boolean){
+		public function setName($name){
 
-			$this->empty	=	(boolean)$boolean;
+			$this->name	=	$name;
 			return $this;
 
 		}
 
-		public function getEmpty(){
+		public function getName(){
 
-			return $this->empty;
+			return $this->name;
 
 		}
 
-		public function setOptions(Array $options){
+		public function setValue($value){
 
-			$this->options	=	$options;
+			$this->value	=	$value;
 			return $this;
-
-		}
-
-		public function getOptions(){
-
-			return $this->options;
-
-		}
-
-		public function validate(Widget $widget){
-
-			$value	=	$this->trim	?	trim($widget->getValue())	:	$widget->getValue();
 			
-			
-			if(sizeof($this->options) && !in_array($value,$this->options)){
+		}
 
-				throw new \InvalidArgumentException("Invalid value \"{$widget->getValue()}\"");
+		public function __toString(){
 
-			}
+			return sprintf('%s%s%s',$this->name,$this->separator,$this->value);
 
-			if(!$this->empty && empty($widget->getValue())){
-
-				throw new \InvalidArgumentException("Value can not be empty");
-
-			}
-
-			return $value;
-
-		}	
+		}
 
 	}
 
-	abstract class Widget implements Renderizable{
+	abstract class Element implements Renderizable{
 
 		private	$name					=	NULL;
 		private	$value				=	NULL;
+		private	$description		=	NULL;
 		private	$validator			=	NULL;
-		private	$outputDecorator	=	NULL;
+		private	$attributes			=	NULL;
 
 		public function __construct(Array $config){
 
 			if(array_key_exists('name',$config)){
 
 				$this->setName($config['name']);
-
-			}
-
-			if(array_key_exists('decorator',$config)){
-
-				$this->setOutputDecorator($config['decorator']);
 
 			}
 
@@ -134,6 +193,18 @@
 			if(array_key_exists('validator',$config)){
 
 				$this->setValidator($config['validator']);
+
+			}
+
+			if(array_key_exists('description',$config)){
+
+				$this->setDescription($config['description']);
+
+			}
+
+			if(array_key_exists('attributes',$config){
+
+				$this->setAttributes($config['attributes']);
 
 			}
 
@@ -165,6 +236,44 @@
 
 		}
 
+		public function addAttribute(Attribute $attribute){
+
+			$this->attributes[]	=	$attribute;
+			return $this;
+
+		}
+
+		public function getAttributes(){
+
+			return $this->attributes;
+
+		}
+
+		public function setAttributes(Array $attributes){
+
+			foreach($attributes as $attribute){
+
+				$this->addAttribute($attribute);
+
+			}
+
+			return $this;
+
+		}
+
+		public function setDescription($description){
+
+			$this->description	=	$description;
+			return $this;
+
+		}
+
+		public function getDescription(){
+
+			return $this->description;
+
+		}
+
 		public function setValidator(Validator $validator){
 
 			$this->validator	=	$validator;
@@ -178,40 +287,96 @@
 
 		}
 
-		public function setOutputDecorator($log){
+		public function __toString(){
 
-			$this->outputDecorator	=	$log;
-			return $this;
+			return $this->render();
 
 		}
 
-		public function getOutputDecorator(){
+	}
 
-			if($this->outputDecorator === NULL){
+	abstract class CliElement extends Element{
 
-				$this->setOutputDecorator(new \apf\core\Log());
+		public function parseAttributes(){
+
+			foreach($this->attributes as $attr){
+
+				switch($attr->getName()){
+
+					case 'color':
+					break;
+
+					default:
+					break;
+
+				}
 
 			}
 
-			return $this->outputDecorator;
+		}
+
+	}
+
+	abstract class InputElement extends Element{
+
+	}
+
+	abstract class SelectElement extends Element{
+
+		private $options	=	Array();
+
+		public function __construct(Array $parameters=Array()){
+
+			parent::__construct($parameters);
+
+			if(isset($parameters['options'])){
+
+				foreach($parameters['options'] as $option){
+
+					$option	=	new OptionElement($option);
+					$this->addOption($option);
+
+				}
+
+			}
 
 		}
 
-		abstract public function render();
+		public function addOption(OptionElement $option){
+
+			$this->options[]	=	$option;
+
+		}
+
+		public function getOptions(){
+
+			return $this->options;
+
+		}
 
 	}
 
-	abstract class CliWidget extends Widget{
+	abstract class OptionElement extends Element{
 
+		public function __construct(Array $parameters=Array()){
+
+			parent::__construct($parameters);
+
+		}
 
 	}
 
-	abstract class PromptableWidget extends CliWidget implements Renderizable{
+	//CLI SPECIFIC WIDGETS
+	//////////////////////////////////////
+
+	class PromptElement extends CliElement{
 
 		private	$prompt	= '>';
 		private	$buffer	=	1024;
 
 		public function __construct(Array $parameters=Array()){
+
+			parent::__construct($parameters);
 
 			$this->setBuffer(array_key_exists('buffer',$parameters)	?	$parameters['buffer']	:	$this->buffer);
 			$this->setPrompt(array_key_exists('prompt',$parameters)	?	$parameters['prompt']	:	$this->prompt);
@@ -244,123 +409,7 @@
 
 		}
 
-	}
-
-	class InputWidget extends PromptableWidget{
-
 		public function render(){
-
-			$this->getOutputDecorator()->log(parent::getPrompt());
-
-			$fp		=	fopen("php://stdin",'r');
-			$value	=	fgets($fp,parent::getBuffer());
-			fclose($fp);
-
-			return $value;
-			
-		}
-
-	}
-
-	class OptionWidget extends CliWidget{
-
-		private	$description	=	NULL;	
-		private	$separator		=	') ';
-
-		public function __construct(Array $parameters=Array()){
-
-			parent::__construct($parameters);
-
-			$this->setDescription(array_key_exists('description',$parameters) ? $parameters['description']	:	$this->description);	
-			$this->setSeparator(array_key_exists('separator',$parameters) ? $parameters['separator']	:	$this->separator);	
-
-		}
-
-		public function setDescription($description){
-
-			$this->description	=	$description;
-			return $this;
-
-		}
-
-		public function getDescription(){
-
-			return $this->description;
-
-		}
-
-		public function setSeparator($separator){
-
-			$this->separator	=	$separator;
-			return $this;
-
-		}
-
-		public function getSeparator(){
-
-			return $this->separator;
-
-		}
-
-		public function render(){
-
-			return $this->getOutputDecorator()->log(sprintf('%s%s%s',parent::getName(),$this->getSeparator(),$this->getDescription()));
-
-		}
-
-		public function __toString(){
-
-			return $this->render();
-
-		}
-
-	}
-
-	class SelectWidget extends InputWidget{
-
-		private $options	=	Array();
-
-		public function __construct(Array $parameters=Array()){
-
-			parent::__construct($parameters);
-
-			if(isset($parameters['options'])){
-
-				foreach($parameters['options'] as $option){
-
-					$option	=	new OptionWidget($option);
-					$option->setOutputDecorator(parent::getOutputDecorator());
-
-					$this->addOption($option);
-
-				}
-
-			}
-
-		}
-
-		public function addOption(OptionWidget $option){
-
-			$this->options[]	=	$option;
-
-		}
-
-		public function getOptions(){
-
-			return $this->options;
-
-		}
-
-		public function render(){
-
-			foreach($this->options as $option){
-
-				$option->render();
-
-			}
-
-			return parent::render();
-
 		}
 
 	}
@@ -368,6 +417,19 @@
 	class TestForm extends Form{
 
 		public function configure(){
+
+			$this->addElement(
+									new SelectElement(
+															Array(
+																	  'options'=>Array(
+																							  Array(
+																									  'name'				=>'a',
+																									  'description'	=>'Set value of A'
+																							  )
+																	  )
+															)
+									)
+			);
 
 		}
 
