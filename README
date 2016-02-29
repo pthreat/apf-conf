@@ -1,0 +1,71 @@
+The plot
+-------------------------------------------------------------------------------
+
+Configure X (a configurable object) 
+Through Z (a factory which chooses which interface shall we used according to context), 
+Z is smart enough to choose which Y (user interface, Cli, GTK, Curses, etc) to use 
+
+What is Z ?
+-------------------------------------------------------------------------------
+
+A factory which chooses which interface shall we used according to context
+
+Z is the "configure" Method in a configurable object i.e "core/Configurable::configure()" ; It detects what is the context php is being called through Kernel::getSAPI()
+In this way, it chooses a proper Y to display to the end user, so, in this fashion, the user can configure said X object through a nice interface.
+
+
+What is X ?
+-------------------------------------------------------------------------------
+
+X is a configurable object that extends to the Configurable class, ie: the Project class
+A configurable object is any object that extends to the "core\Configurable" class
+
+
+What is Y ?
+-------------------------------------------------------------------------------
+
+Y are a set of different interfaces (forms), cli, web, gtk, curses, etc , that enable the end user to configure a Configurable object
+through a Form.
+
+The Y form will get all properties from the configuration of the configurable object and turn each one of these properties into the 
+corresponding form elements.
+
+Each one of the elements has to be assigned a name and the configurable object in question.
+When creating elements through createElements the name of the element will be the same as the attribute to be configured from the configurable object
+ElementName = ConfigurableAttributeName
+
+When setting the value of said attribute, the corresponding setter from the configurable object will be called by the form element.
+Since each attribute of the configurable object has a corresponding validation for said assigned value, no special validators are needed for form elements
+
+Each one of these interfaces have proper form Elements that extend to *basic* Form elements
+
+-------------------------------------------------------------------------------
+Forms:
+-------------------------------------------------------------------------------
+
+A form is just a user interface which takes user input for it to be completed.
+
+A form might or might have something to do with a configurable object.
+
+A Form Factory is provided to initialize a form from a Configurable object: \apf\ui\form\Factory
+
+-------------------------------------------------------------------------------
+Common attributes / methods between forms:
+-------------------------------------------------------------------------------
+
+All forms regardless of the interface they're being displayed in, contain several properties in common.
+
+Some of the common properties we can enumerate as common are:
+
+A title
+Elements
+An action (See Action notes)
+
+NOTE: It is important to denote that forms are *not dependant* from a configurable object. 
+The configurable object in a form plays the role of auto element creation in said form
+but said object is not strictly required for the form to function.
+
+
+
+
+
